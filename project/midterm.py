@@ -18,6 +18,9 @@
 #                                BEGIN PROGRAM                                 
 #-------------------------------------------------------------------------------
 
+#*******************************************************************************
+#                               IMPORTED LIBRARIES
+#*******************************************************************************
 
 import streamlit as st
 import seaborn as sns
@@ -28,6 +31,9 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.metrics import r2_score
 
+#*******************************************************************************
+#                            LOAD AND FUTZ THE DATA
+#******************************************************************************* 
 def load_in_ame2020 ( filename = "ame2020.txt" ) :
 
     # Define the column widths based on the Fortran format
@@ -92,6 +98,10 @@ if 'a_x' in df_merge.columns and 'a_y' in df_merge.columns:
     df_merge['a'] = df_merge['a_x'].combine_first(df_merge['a_y'])
     df_merge = df_merge.drop(columns=['a_x', 'a_y'])
 
+#*******************************************************************************
+#                             STREAMLIT PAGES SETUP
+#*******************************************************************************
+ 
 st.sidebar.title('Navigation')
 
 page_options = ["Home Page","Introduction to Nuclear Physics",
@@ -224,11 +234,31 @@ if page == page_options [ 2 ] : # datasets
                                 horizontal = True )
     
     if dataset_choice == dataset_options [ 0 ] : # AME2020
-        df = df_ame
+        df_ds = df_ame.copy()
     if dataset_choice == dataset_options [ 1 ] : # IAEA NDS
-        df = df_rc
+        df_ds = df_rc.copy()
     if dataset_choice == dataset_options [ 2 ] : # Merged
-        df = df_merge
+        df_ds = df_merge.copy()
+
+    impute_options = [ 'No' , 'Drop NaNs' , 'Impute Mean' ,
+                       'Impute Median' , 'Impute Mode' ]
+    impute_string = 'The dataset might be dirty, would you like to do' \
+                    ' anyhting about that?'
+    impute_choice = st.radio ( impute_string , 
+                               impute_options , 
+                               horizontal = True )
+    
+    if impute_choice == impute_options [ 0 ] : # No
+        st.write ( 'Brave choice! be aware that things may break!' )
+    elif impute_choice == impute_options [ 1 ] : # drop nans
+        df_ds = df_ds.dropna()
+    elif impute_choice == impute_options [ 2 ] : # impute mean
+        df_ds = df_ds.fillna ( df_ds.mean(numeric_only=True) )
+        st.write('test')
+    elif impute_choice == impute_options [ 3 ] : # impute median
+        df_ds = df_ds.fillna ( df_ds.median(numeric_only=True) )
+    elif impute_choice == impute_options [ 4 ] : # impute mode
+        df_ds = df_ds.fillna ( df_ds.mode(numeric_only=True).iloc[0] )
 
     description_options = [ 'Data Information' , 'Summary Statisitics' , 
                            'Missingness Visualzation' ]
@@ -241,15 +271,15 @@ if page == page_options [ 2 ] : # datasets
     data_miss_toggle = st.toggle ( description_options [ 2 ] )
 
     if data_info_toggle == True :
-        st.write("**Shape:**", df.shape)
-        st.write("**Columns:**", df.columns)
+        st.write("**Shape:**", df_ds.shape)
+        st.write("**Columns:**", df_ds.columns)
     if data_stats_toggle == True :
-        st.dataframe(df.describe())
+        st.dataframe(df_ds.describe())
     if data_miss_toggle == True : # ChatGPT 5.0 helped me with this bit. 
                                   # specifically, the table. (08.10.2025)
 
-        missing_counts = df.isnull().sum()
-        missing_pct = (missing_counts / len(df)) * 100
+        missing_counts = df_ds.isnull().sum()
+        missing_pct = (missing_counts / len(df_ds)) * 100
         missing_df = pd.DataFrame({
             "Missing Values Count": missing_counts,
             "Missing Values Percentage": missing_pct
@@ -263,11 +293,11 @@ if page == page_options [ 2 ] : # datasets
 
         fig, ax = plt.subplots(figsize=(10, 6))
         sns.set(font_scale=1.4)
-        sns.heatmap(df.isnull().transpose(), xticklabels=False,cmap='viridis')
+        sns.heatmap(df_ds.isnull().transpose(), xticklabels=False,cmap='viridis')
         st.pyplot(fig)
 
     st.download_button(f"Download {dataset_choice}? Click me!",
-                       df.to_csv(index=False), 
+                       df_ds.to_csv(index=False), 
                        file_name=f"{dataset_choice}.csv")
 
 if page == page_options [ 3 ] : # exploring correlations
@@ -320,6 +350,25 @@ if page == page_options [ 3 ] : # exploring correlations
     parity_labels = ['Even-Even', 'Even-Odd', 'Odd-Odd']
     df_ec['parity'] = np.select(parity_conditions, parity_labels,default=str)
 
+    impute_options = [ 'No' , 'Drop NaNs' , 'Impute Mean' ,
+                       'Impute Median' , 'Impute Mode' ]
+    impute_string = 'The dataset might be dirty, would you like to do' \
+                    ' anyhting about that?'
+    impute_choice = st.radio ( impute_string , 
+                               impute_options , 
+                               horizontal = True )
+    
+    if impute_choice == impute_options [ 0 ] : # No
+        st.write ( 'Brave choice! be aware that things may break!' )
+    elif impute_choice == impute_options [ 1 ] : # drop nans
+        df_ec = df_ec.dropna()
+    elif impute_choice == impute_options [ 1 ] : # impute mean
+        df_ec = df_ec.fillna ( df_ec.mean() )
+    elif impute_choice == impute_options [ 1 ] : # impute median
+        df_ec = df_ec.fillna ( df_ec.median() )
+    elif impute_choice == impute_options [ 1 ] : # impute mode
+        df_ec = df_ec.fillna ( df_ec.mode() )
+
     scaling_options = [ 'None' , 'Standard' , 'Min/Max']
     scaling_string = 'Would you like to apply a Scaler to the data?'
     scaling_choice = st.radio ( scaling_string ,
@@ -342,10 +391,12 @@ if page == page_options [ 3 ] : # exploring correlations
 
         if scaling_choice == 'Standard' and cols_to_scale:
             scaler = StandardScaler()
-            numeric_cols[cols_to_scale] = scaler.fit_transform(numeric_cols[cols_to_scale])
+            numeric_cols[cols_to_scale] = scaler.fit_transform(
+                numeric_cols[cols_to_scale])
         elif scaling_choice == 'Min/Max' and cols_to_scale:
             scaler = MinMaxScaler()
-            numeric_cols[cols_to_scale] = scaler.fit_transform(numeric_cols[cols_to_scale])
+            numeric_cols[cols_to_scale] = scaler.fit_transform(
+                numeric_cols[cols_to_scale])
 
         non_numeric_cols = df_ec.select_dtypes(exclude=["number"]).copy()
         df_scaled = pd.concat([non_numeric_cols, numeric_cols], axis=1)
@@ -377,7 +428,7 @@ if page == page_options [ 3 ] : # exploring correlations
                 "Kernel Density Estimator",
                 "Histogram"]
         kind_string = 'What KIND of pairplot would you like?'
-        kind_choice = st.radio ( kind_string , kind_options , horizontal = True )
+        kind_choice = st.radio( kind_string , kind_options , horizontal = True )
 
         if kind_choice == kind_options [ 0 ] :
             kind = 'scatter'
@@ -488,10 +539,12 @@ if page == page_options [ 4 ] : # interactive plot
 
         if scaling_choice == 'Standard' and cols_to_scale:
             scaler = StandardScaler()
-            numeric_cols[cols_to_scale] = scaler.fit_transform(numeric_cols[cols_to_scale])
+            numeric_cols[cols_to_scale] = scaler.fit_transform(
+                numeric_cols[cols_to_scale])
         elif scaling_choice == 'Min/Max' and cols_to_scale:
             scaler = MinMaxScaler()
-            numeric_cols[cols_to_scale] = scaler.fit_transform(numeric_cols[cols_to_scale])
+            numeric_cols[cols_to_scale] = scaler.fit_transform(
+                numeric_cols[cols_to_scale])
 
         non_numeric_cols = df_ip_clean.select_dtypes(exclude=["number"]).copy()
         df_ip_clean = pd.concat([non_numeric_cols, numeric_cols], axis=1)
@@ -514,14 +567,16 @@ if page == page_options [ 4 ] : # interactive plot
     r2 = r2_score(y, y_pred)
 
     fig, ax = plt.subplots()
-    ax.scatter(df_ip_clean['radius_val'], df_ip_clean['a_trans'], alpha=0.7, label='Data')
+    ax.scatter(df_ip_clean['radius_val'], df_ip_clean['a_trans'],
+                alpha=0.7, label='Data')
     ax.plot(df_ip_clean['radius_val'], y_pred, color='red', label='Fit')
     ax.grid(ls='--',alpha=0.5)
 
     slope = model.coef_[0]
     intercept = model.intercept_
     eq_text = f"y = {slope:.3e} x + {intercept:.3e}\n$R^2$ = {r2:.3f}"
-    ax.text(0.05, 0.95, eq_text, transform=ax.transAxes, fontsize=12, verticalalignment='top')
+    ax.text(0.05, 0.95, eq_text, transform=ax.transAxes, fontsize=12,
+             verticalalignment='top')
 
     ax.set_xlabel('radius_val')
     ax.set_ylabel(f"a^({exp:.3f})")

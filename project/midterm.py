@@ -30,10 +30,20 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.metrics import r2_score
+import os
 
 #*******************************************************************************
 #                            LOAD AND FUTZ THE DATA
 #******************************************************************************* 
+
+# pathing error for app deployment. ChatGPT 5.0 (14.10.25) reccomended this fix.
+# Get the directory where this file (app.py) lives
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Build full path to data file
+ame_path = os.path.join(APP_DIR, "ame2020.txt")
+rc_path = os.path.join(APP_DIR, "charge_radius.csv")
+
 def load_in_ame2020 ( filename = "ame2020.txt" ) :
 
     # Define the column widths based on the Fortran format
@@ -235,10 +245,55 @@ if page == page_options [ 2 ] : # datasets
     
     if dataset_choice == dataset_options [ 0 ] : # AME2020
         df_ds = df_ame.copy()
+        default_option = [ 'mass_excess' ,
+                    'binding_energy' ,
+                    'beta_ener' ,
+                    'atomic_mass' ]
     if dataset_choice == dataset_options [ 1 ] : # IAEA NDS
         df_ds = df_rc.copy()
+        default_option = [ 'radius_val' ]
     if dataset_choice == dataset_options [ 2 ] : # Merged
         df_ds = df_merge.copy()
+        default_option = [ 'mass_excess' ,
+                      'binding_energy' ,
+                      'beta_ener' ,
+                      'atomic_mass' ,
+                      'radius_val' ]
+
+    scaling_options = [ 'None' , 'Standard' , 'Min/Max']
+    scaling_string = 'Would you like to apply a Scaler to the data?'
+    scaling_choice = st.radio ( scaling_string ,
+                               scaling_options ,
+                               horizontal = True )
+
+    # I wrote some code to apply a scaler to the data and recombine it all for 
+    # plotting and such. After, I asked chatGPT 5.0 if there was way to do it 
+    # better and it generated this. (08.10.25)
+
+    # Apply scaling if selected
+    if scaling_choice != 'None':
+        numeric_cols = df_ds.select_dtypes(include=["number"]).copy()
+
+        cols_to_scale = st.multiselect(
+            "Select columns to apply scaling to:",
+            options=numeric_cols.columns.tolist(),
+            default=default_option
+        )
+
+        if scaling_choice == 'Standard' and cols_to_scale:
+            scaler = StandardScaler()
+            numeric_cols[cols_to_scale] = scaler.fit_transform(
+                numeric_cols[cols_to_scale])
+        elif scaling_choice == 'Min/Max' and cols_to_scale:
+            scaler = MinMaxScaler()
+            numeric_cols[cols_to_scale] = scaler.fit_transform(
+                numeric_cols[cols_to_scale])
+
+        non_numeric_cols = df_ds.select_dtypes(exclude=["number"]).copy()
+        df_ds = pd.concat([non_numeric_cols, numeric_cols], axis=1)
+
+    else:
+        df_scaled = df_ds.copy()
 
     impute_options = [ 'No' , 'Drop NaNs' , 'Impute Mean' ,
                        'Impute Median' , 'Impute Mode' ]
@@ -254,7 +309,6 @@ if page == page_options [ 2 ] : # datasets
         df_ds = df_ds.dropna()
     elif impute_choice == impute_options [ 2 ] : # impute mean
         df_ds = df_ds.fillna ( df_ds.mean(numeric_only=True) )
-        st.write('test')
     elif impute_choice == impute_options [ 3 ] : # impute median
         df_ds = df_ds.fillna ( df_ds.median(numeric_only=True) )
     elif impute_choice == impute_options [ 4 ] : # impute mode
@@ -362,12 +416,12 @@ if page == page_options [ 3 ] : # exploring correlations
         st.write ( 'Brave choice! be aware that things may break!' )
     elif impute_choice == impute_options [ 1 ] : # drop nans
         df_ec = df_ec.dropna()
-    elif impute_choice == impute_options [ 1 ] : # impute mean
-        df_ec = df_ec.fillna ( df_ec.mean() )
-    elif impute_choice == impute_options [ 1 ] : # impute median
-        df_ec = df_ec.fillna ( df_ec.median() )
-    elif impute_choice == impute_options [ 1 ] : # impute mode
-        df_ec = df_ec.fillna ( df_ec.mode() )
+    elif impute_choice == impute_options [ 2 ] : # impute mean
+        df_ec = df_ec.fillna ( df_ec.mean(numeric_only=True) )
+    elif impute_choice == impute_options [ 3 ] : # impute median
+        df_ec = df_ec.fillna ( df_ec.median(numeric_only=True) )
+    elif impute_choice == impute_options [ 4 ] : # impute mode
+        df_ec = df_ec.fillna ( df_ec.mode(numeric_only=True).iloc[0] )
 
     scaling_options = [ 'None' , 'Standard' , 'Min/Max']
     scaling_string = 'Would you like to apply a Scaler to the data?'
@@ -399,25 +453,25 @@ if page == page_options [ 3 ] : # exploring correlations
                 numeric_cols[cols_to_scale])
 
         non_numeric_cols = df_ec.select_dtypes(exclude=["number"]).copy()
-        df_scaled = pd.concat([non_numeric_cols, numeric_cols], axis=1)
+        df_ec = pd.concat([non_numeric_cols, numeric_cols], axis=1)
 
     else:
-        df_scaled = df_ec.copy()
+        df_ec = df_ec.copy()
 
     # Ensure critical columns exist, i asked ChatGPT what was going on when
     # it the code didnt recognize parity. it output this (10.10.2025)
     for col in ['isospin_asymmetry', 'parity','a']:
-        if col not in df_scaled.columns:
-            df_scaled[col] = df_ec[col]
+        if col not in df_ec.columns:
+            df_ec[col] = df_ec[col]
 
     # Confirm column list for plotting
-    available_cols = [c for c in default_option + ['isospin_asymmetry' , 'parity','a'] if c in df_scaled.columns]
+    available_cols = [c for c in default_option + ['isospin_asymmetry' , 'parity','a'] if c in df_ec.columns]
 
     # st.write("**Columns available for pairplot:**", available_cols)
 
     if ec_choice == ec_options [ 0 ] :
         sns.reset_defaults()
-        numeric_cols = df_scaled[available_cols].select_dtypes(include=np.number)
+        numeric_cols = df_ec[available_cols].select_dtypes(include=np.number)
         heatmap = sns.heatmap(numeric_cols.corr(), annot=True, cmap='viridis')
         st.pyplot(heatmap.figure)
 
@@ -456,7 +510,7 @@ if page == page_options [ 3 ] : # exploring correlations
             with st.spinner("Generating pairplot..."):
                 sns.set_context("talk", font_scale=1.6)
                 fig = sns.pairplot(
-                    df_scaled[available_cols],
+                    df_ec[available_cols],
                     hue=hue,
                     kind=kind,
                     diag_kind='auto',
@@ -476,8 +530,24 @@ if page == page_options [ 4 ] : # interactive plot
 
     df_ip = df_merge.copy()
 
-    impute_options = [ 'No' , 'Yes [not implemented]' ]
-    impute_choice = st.radio ( 'Impute data?' , impute_options )
+    impute_options = [ 'No' , 'Drop NaNs' , 'Impute Mean' ,
+                       'Impute Median' , 'Impute Mode' ]
+    impute_string = 'The dataset might be dirty, would you like to do' \
+                    ' anyhting about that?'
+    impute_choice = st.radio ( impute_string , 
+                               impute_options , 
+                               horizontal = True )
+    
+    if impute_choice == impute_options [ 0 ] : # No
+        st.write ( 'Brave choice! be aware that things may break!' )
+    elif impute_choice == impute_options [ 1 ] : # drop nans
+        df_ip = df_ip.dropna()
+    elif impute_choice == impute_options [ 2 ] : # impute mean
+        df_ip = df_ip.fillna ( df_ip.mean(numeric_only=True) )
+    elif impute_choice == impute_options [ 3 ] : # impute median
+        df_ip = df_ip.fillna ( df_ip.median(numeric_only=True) )
+    elif impute_choice == impute_options [ 4 ] : # impute mode
+        df_ip = df_ip.fillna ( df_ip.mode(numeric_only=True).iloc[0] )
 
     df_ip['isospin_asymmetry'] = ( df_ip['n'] - df_ip['z'] ) / ( df_ip['n'] + df_ip['z'] )
 
@@ -516,7 +586,7 @@ if page == page_options [ 4 ] : # interactive plot
 
     if impute_choice == impute_options [ 0 ] :
 
-        df_ip_clean = df_ip.dropna(subset=['radius_val', 'a_trans'])
+        df_ip = df_ip.dropna(subset=['radius_val', 'a_trans'])
 
     scaling_options = [ 'None' , 'Standard' , 'Min/Max']
     scaling_string = 'Would you like to apply a Scaler to the data?'
@@ -529,7 +599,7 @@ if page == page_options [ 4 ] : # interactive plot
     # better and it generated this. (08.10.25)
 
     if scaling_choice != 'None':
-        numeric_cols = df_ip_clean.select_dtypes(include=["number"]).copy()
+        numeric_cols = df_ip.select_dtypes(include=["number"]).copy()
 
         cols_to_scale = st.multiselect(
             "Select columns to apply scaling to:",
@@ -546,8 +616,8 @@ if page == page_options [ 4 ] : # interactive plot
             numeric_cols[cols_to_scale] = scaler.fit_transform(
                 numeric_cols[cols_to_scale])
 
-        non_numeric_cols = df_ip_clean.select_dtypes(exclude=["number"]).copy()
-        df_ip_clean = pd.concat([non_numeric_cols, numeric_cols], axis=1)
+        non_numeric_cols = df_ip.select_dtypes(exclude=["number"]).copy()
+        df_ip = pd.concat([non_numeric_cols, numeric_cols], axis=1)
 
     else:
         df_scaled = df_ip.copy()
@@ -557,9 +627,8 @@ if page == page_options [ 4 ] : # interactive plot
     #     if col not in df_scaled.columns:
     #         df_scaled[col] = df_ip[col]
 
-
-    X = df_ip_clean[['radius_val']].values
-    y = df_ip_clean['a_trans'].values
+    X = df_ip[['radius_val']].values
+    y = df_ip['a_trans'].values
 
     model = LinearRegression()
     model.fit(X, y)
@@ -567,9 +636,9 @@ if page == page_options [ 4 ] : # interactive plot
     r2 = r2_score(y, y_pred)
 
     fig, ax = plt.subplots()
-    ax.scatter(df_ip_clean['radius_val'], df_ip_clean['a_trans'],
+    ax.scatter(df_ip['radius_val'], df_ip['a_trans'],
                 alpha=0.7, label='Data')
-    ax.plot(df_ip_clean['radius_val'], y_pred, color='red', label='Fit')
+    ax.plot(df_ip['radius_val'], y_pred, color='red', label='Fit')
     ax.grid(ls='--',alpha=0.5)
 
     slope = model.coef_[0]
@@ -580,10 +649,33 @@ if page == page_options [ 4 ] : # interactive plot
 
     ax.set_xlabel('radius_val')
     ax.set_ylabel(f"a^({exp:.3f})")
-    ax.set_title(f"radius_val vs a^({exp:.3f}) with Linear Fit")
+    ax.tick_params(direction='in')
     ax.legend()
 
     st.pyplot(fig)
+
+    if exp_slider == -3 :
+        st.write(r'''Woah, that looks Good! So, if the radius of the nucleus is 
+        well represented by the cubic root of the mass number, what does this 
+        imply about the volume of a nucleus?''')
+
+        hint = st.checkbox('Click me for a hint!')
+        if hint == True :
+            st.write ( '''What happens if we pretend the nucleus is a sphere?''' )
+        answer = st.checkbox ('Click me for the answer.')
+        if answer == True :
+            st.markdown (r'''
+                        If we model the nucleus as a sphere, then we can say 
+                        that the volume of the nucleus is given by,
+
+                        $V_{\text{nucleus}}=V_{\text{sphere}}=\frac{4}{3}\pi r_c^3=\frac{4}{3}\pi a^{3/3}$
+                         
+                        $\implies V_{\text{nucleus}} \propto a$
+                         
+                        That is, the nucleus is comprised mostly of the 
+                        number of protons and neutrons it has!
+                        ''')
+
 
 #-------------------------------------------------------------------------------
 #                                  END PROGRAM                                  

@@ -44,7 +44,7 @@ APP_DIR = os.path.dirname(os.path.abspath(__file__))
 ame_path = os.path.join(APP_DIR, "ame2020.txt")
 rc_path = os.path.join(APP_DIR, "charge_radius.csv")
 
-def load_in_ame2020 ( filename = "ame2020.txt" ) :
+def load_in_ame2020 ( filename = ame_path ) :
 
     # Define the column widths based on the Fortran format
     colspecs = [
@@ -97,7 +97,7 @@ def load_in_ame2020 ( filename = "ame2020.txt" ) :
     return df_ame
 
 df_ame = load_in_ame2020()
-df_rc = pd.read_csv('charge_radius.csv')
+df_rc = pd.read_csv(rc_path)
 df_merge = pd.merge(df_ame , df_rc , on = ["z", "n"] , how = "outer" )
 
 # ChatGPT wrote this handler for when pandas notices repeat columns in a merger.

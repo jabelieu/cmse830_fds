@@ -470,6 +470,10 @@ if page == page_options [ 3 ] : # exploring correlations
     # st.write("**Columns available for pairplot:**", available_cols)
 
     if ec_choice == ec_options [ 0 ] :
+
+        # these commented out lines are the first iteration of the 
+        # visualization. after making it, I dropped it into chatGPT and asked
+        # if it can be done with plotly. that code is now implemented (15.10.25)
         # sns.reset_defaults()
         numeric_cols = df_ec[available_cols].select_dtypes(include=np.number)
         # heatmap = sns.heatmap(numeric_cols.corr(), annot=True, cmap='viridis')
@@ -663,6 +667,10 @@ if page == page_options [ 4 ] : # interactive plot
     r2 = r2_score(y, y_pred)
     slope = model.coef_[0]
     intercept = model.intercept_
+
+    # these commented out lines below are the first iteration of the 
+    # visualization. after making it, I dropped it into chatGPT 5.0 and asked
+    # if it can be done with plotly. that code is now implemented (15.10.25)
 
     # Create a DataFrame with X, y, and predictions
     df_plot = pd.DataFrame({

@@ -4,7 +4,7 @@
 #           of material from class. I have decided to explore nuclear physics
 #           datasets.
 # DATE CREATED  : 30.09.25
-# LAST MODIFIED : ##.10.25
+# LAST MODIFIED : 15.10.25
 #
 # AUTHOR*     : Joshua Belieu | Fletch
 #                *Portions of this code were written or augmented with an LLM.
@@ -30,6 +30,7 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.metrics import r2_score
+import plotly.express as px
 import os
 
 #*******************************************************************************
@@ -128,10 +129,9 @@ if page == page_options [ 0 ] : # home page
     st.markdown ( '''Hello! Welcome to my project that approaches and investigates
         two nuclear physics datasets from a data science perspective. Hopefully,
         I can employ data science techniques to 'discover' common nuclear 
-        physics notions or maybe even find something new!
-              
+        physics notions or maybe even find something new!  
         Nuclear physics is cool but complex and difficult to follow at times.
-        Please see my 'introduciton to nuclear physics' tab (found on  the left
+        Please see my 'introduction to nuclear physics' tab (found on  the left
         side of your screen) for a light explanation of topics you will find on
         this app.''' )
 
@@ -197,8 +197,8 @@ if page == page_options [ 1 ] : # intro to nucl. phys.
     electrons scatter off nuclons, this typically referred to as the *charge 
     radius*, $r_c$. We could discuss the intricacies of how complex and nuanced
     this answer could be from a theoretical perspective but instead lets leave 
-    it as an exercise for the user to answer *"What determines how big a nucleus
-    is?"* INPUT LINES ABOUT CHARGE RADIUS PLOT.
+    it as an exercise for the user to answer the question, *"What determines how big a nucleus
+    is?"* See the 'interactive plot' tab to see more!
                 
 
     Physicists, like data scientists, often look for convenient ways to package
@@ -211,9 +211,9 @@ if page == page_options [ 1 ] : # intro to nucl. phys.
     $$
     \Pi = 
     \begin{cases} 
-    \text{Even-Even}, & \text{if $N$ and $Z$ are both even} \\
-    \text{Even-Odd / Odd-Even}, & \text{if one of $N$ or $Z$ is even, the other odd} \\
-    \text{Odd-Odd}, & \text{if both $N$ and $Z$ are odd}
+    \text{Even-Even}, & \text{if $n$ and $z$ are both even} \\
+    \text{Even-Odd / Odd-Even}, & \text{if one of $n$ or $z$ is even, the other odd} \\
+    \text{Odd-Odd}, & \text{if both $n$ and $z$ are odd}
     \end{cases}
     $$
                 
@@ -222,8 +222,8 @@ if page == page_options [ 1 ] : # intro to nucl. phys.
     known as **Isospin Asymmetry**,I.
                 
     $$
-    I=\frac{N-Z}{N+Z}=\frac{N\pm Z-Z}{A}=\frac{N+Z-2Z}{A}=\frac{A-2Z}{A}
-    =1-2\frac{Z}{A}\equiv 1-2y_p
+    I=\frac{n-z}{n+z}=\frac{n\pm z-z}{a}=\frac{n+z-2z}{a}=\frac{a-2z}{a}
+    =1-2\frac{z}{a}\equiv 1-2y_p
     $$
                 
     Where this last expression introduces the 'proton fraction', $y_p$.
@@ -235,21 +235,21 @@ if page == page_options [ 2 ] : # datasets
 
     st.header( 'Lets take a look at our datasets!' )
 
-    dataset_options = [ 'AME2020' ,
-                        'IAEA NDS' ,
-                        'Merged ( AME2020 + IAEA NDS )' ]
+    dataset_options = [ 'Binding Energy' ,
+                        'Charge Radii' ,
+                        'Merged ( Binding Energy + Charge Radii )' ]
 
     dataset_choice = st.radio ( 'Select a dataset to view : ' ,
                                 dataset_options ,
                                 horizontal = True )
     
-    if dataset_choice == dataset_options [ 0 ] : # AME2020
+    if dataset_choice == dataset_options [ 0 ] : # Binding Energy
         df_ds = df_ame.copy()
         default_option = [ 'mass_excess' ,
                     'binding_energy' ,
                     'beta_ener' ,
                     'atomic_mass' ]
-    if dataset_choice == dataset_options [ 1 ] : # IAEA NDS
+    if dataset_choice == dataset_options [ 1 ] : # Charge Radii
         df_ds = df_rc.copy()
         default_option = [ 'radius_val' ]
     if dataset_choice == dataset_options [ 2 ] : # Merged
@@ -350,9 +350,9 @@ if page == page_options [ 2 ] : # datasets
         sns.heatmap(df_ds.isnull().transpose(), xticklabels=False,cmap='viridis')
         st.pyplot(fig)
 
-    st.download_button(f"Download {dataset_choice}? Click me!",
-                       df_ds.to_csv(index=False), 
-                       file_name=f"{dataset_choice}.csv")
+    # st.download_button(f"Download {dataset_choice}? Click me!",
+    #                    df_ds.to_csv(index=False), 
+    #                    file_name=f"{dataset_choice}.csv")
 
 if page == page_options [ 3 ] : # exploring correlations
 
@@ -362,9 +362,9 @@ if page == page_options [ 3 ] : # exploring correlations
     ec_options = [ 'Correlation Heatmap' , 'Pairplot' ,  ]
     ec_choice = st.radio ( 'How would you like to view your correlations?' , ec_options )
 
-    dataset_options = [ 'AME2020' ,
-                        'IAEA NDS' ,
-                        'Merged ( AME2020 + IAEA NDS )' ]
+    dataset_options = [ 'Binding Energy' ,
+                        'Charge Radii' ,
+                        'Merged ( Binding Energy + Charge Radii )' ]
     dataset_choice = st.radio ( 'Select a dataset to explore : ' ,
                                dataset_options ,
                                horizontal = True ) 
@@ -470,10 +470,24 @@ if page == page_options [ 3 ] : # exploring correlations
     # st.write("**Columns available for pairplot:**", available_cols)
 
     if ec_choice == ec_options [ 0 ] :
-        sns.reset_defaults()
+        # sns.reset_defaults()
         numeric_cols = df_ec[available_cols].select_dtypes(include=np.number)
-        heatmap = sns.heatmap(numeric_cols.corr(), annot=True, cmap='viridis')
-        st.pyplot(heatmap.figure)
+        # heatmap = sns.heatmap(numeric_cols.corr(), annot=True, cmap='viridis')
+        # st.pyplot(heatmap.figure)
+        # Compute correlation matrix
+        corr_matrix = numeric_cols.corr()
+
+        # Create Plotly heatmap
+        fig = px.imshow(
+            corr_matrix,
+            text_auto=True,       # show correlation values on cells
+            aspect="auto",        # keep cells square-ish
+            color_continuous_scale='Viridis',
+            labels=dict(x="Features", y="Features", color="Correlation")
+        )
+
+        # Show in Streamlit
+        st.plotly_chart(fig, use_container_width=True)
 
     if ec_choice == ec_options [ 1 ] :
 
@@ -620,7 +634,20 @@ if page == page_options [ 4 ] : # interactive plot
         df_ip = pd.concat([non_numeric_cols, numeric_cols], axis=1)
 
     else:
-        df_scaled = df_ip.copy()
+        df_ip = df_ip.copy()
+
+    encoder_options = [ 'None' , 'Isospin Asymmetry' , 'Parity' ]
+    encoder_string = 'Select an encoder to color the  scatter plot by.'
+    encoder_choice = st.radio ( encoder_string ,
+                            encoder_options ,
+                            horizontal = True )
+
+    if encoder_choice == encoder_options [ 0 ] :
+        hue = None
+    if encoder_choice == encoder_options [ 1 ] :
+        hue = 'isospin_asymmetry'
+    if encoder_choice == encoder_options [ 2 ] :
+        hue = 'parity'
 
     # # Ensure critical columns exist
     # for col in ['isospin_asymmetry', 'parity','a']:
@@ -634,25 +661,79 @@ if page == page_options [ 4 ] : # interactive plot
     model.fit(X, y)
     y_pred = model.predict(X)
     r2 = r2_score(y, y_pred)
-
-    fig, ax = plt.subplots()
-    ax.scatter(df_ip['radius_val'], df_ip['a_trans'],
-                alpha=0.7, label='Data')
-    ax.plot(df_ip['radius_val'], y_pred, color='red', label='Fit')
-    ax.grid(ls='--',alpha=0.5)
-
     slope = model.coef_[0]
     intercept = model.intercept_
-    eq_text = f"y = {slope:.3e} x + {intercept:.3e}\n$R^2$ = {r2:.3f}"
-    ax.text(0.05, 0.95, eq_text, transform=ax.transAxes, fontsize=12,
-             verticalalignment='top')
 
-    ax.set_xlabel('radius_val')
-    ax.set_ylabel(f"a^({exp:.3f})")
-    ax.tick_params(direction='in')
-    ax.legend()
+    # Create a DataFrame with X, y, and predictions
+    df_plot = pd.DataFrame({
+        'radius_val': df_ip['radius_val'],
+        'a_trans': df_ip['a_trans'],
+        'y_pred': y_pred , 
+        'a' : df_ip['a'],
+        'z' : df_ip['z'],
+        'n' : df_ip['n'],
+        'element' : df_ip['EL'],
+        'residual' : np.round(df_ip['a_trans']-y_pred,2),
+        'isospin_asymmetry' : df_ip['isospin_asymmetry'],
+        'parity' : df_ip['parity']
+    })
 
-    st.pyplot(fig)
+    # Create scatter plot with regression line
+    fig = px.scatter(
+        df_plot,
+        x='radius_val',
+        y='a_trans',
+        opacity=0.7,
+        color=hue,
+        labels={'radius_val': 'radius_val', 'a_trans': f'a^{exp:.3f}'},
+        title=f"radius_val vs a^{exp:.3f} with Linear Fit",
+        hover_data={'element': True,'a': True,'n': True,'z': True,
+                    'radius_val': True, 'a_trans': True, 'y_pred': True,
+                    'residual': True}
+    )
+
+    # Add regression line in red
+    fit_line = px.line(df_plot, x='radius_val', y='y_pred')
+    fit_line.data[0].update(line=dict(color='red', width=2))
+    fig.add_traces(fit_line.data)
+
+    # Add R^2 text annotation
+    fig.add_annotation(
+        x=0.05, y=0.95, xref='paper', yref='paper',
+        text=f"y = {slope:.3e} x + {intercept:.3e}<br>R² = {r2:.3f}",
+        showarrow=False,
+        font=dict(size=22),
+        align="left"
+    )
+
+    # Update all axis titles and tick labels to larger font
+    fig.update_layout(
+        title_font_size=20,
+        xaxis=dict(title_font=dict(size=22), tickfont=dict(size=14)),
+        yaxis=dict(title_font=dict(size=22), tickfont=dict(size=14)),
+        legend=dict(font=dict(size=14))
+    )
+
+    # Show interactive plot in Streamlit
+    st.plotly_chart(fig, use_container_width=True)
+
+    # fig, ax = plt.subplots()
+    # ax.scatter(df_ip['radius_val'], df_ip['a_trans'],
+    #             alpha=0.7, label='Data')
+    # ax.plot(df_ip['radius_val'], y_pred, color='red', label='Fit')
+    # ax.grid(ls='--',alpha=0.5)
+
+
+    # eq_text = f"y = {slope:.3e} x + {intercept:.3e}\n$R^2$ = {r2:.3f}"
+    # ax.text(0.05, 0.95, eq_text, transform=ax.transAxes, fontsize=12,
+    #          verticalalignment='top')
+
+    # ax.set_xlabel('radius_val')
+    # ax.set_ylabel(f"a^({exp:.3f})")
+    # ax.tick_params(direction='in')
+    # ax.legend()
+
+    # st.pyplot(fig)
 
     if exp_slider == -3 :
         st.write(r'''Woah, that looks Good! So, if the radius of the nucleus is 

@@ -199,6 +199,25 @@ if page == page_options [ 1 ] : # intro to nucl. phys.
     this answer could be from a theoretical perspective but instead lets leave 
     it as an exercise for the user to answer the question, *"What determines how big a nucleus
     is?"* See the 'interactive plot' tab to see more!
+
+    In nuclear physics, we also like to talk about how a nucleus might change its composition. 
+    This is commonly referred to as $\beta$-decay. There are a few ways in which this might 
+    occur but for the purposes of this project we will only talk about the process known as
+    $\beta^-$ decay. The process is seen as
+    
+    $$
+    (n,z) \rightarrow (n-1,z+1) + e^- + \bar{\nu}_e
+    $$
+                
+    That is, a nucleus with $(n,z)$ particles changes into a nucleus with $(n-1,z+1)$ where an electron and 
+    an anti-electron neutrino are emitted in the process (don't worry about these, but they're cool!).
+
+    The $\beta$-decay energy, $Q$, represents the amount of energy released in this transformation.  
+    It is calculated from the atomic masses of the parent and daughter nuclei as:
+
+    $$
+    Q_{-} = [M(n,z) - M(n-1,z+1)]c^2
+    $$
                 
 
     Physicists, like data scientists, often look for convenient ways to package

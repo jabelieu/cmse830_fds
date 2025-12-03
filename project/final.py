@@ -36,6 +36,7 @@ from sklearn.linear_model import Ridge, Lasso
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.decomposition import PCA
+from sklearn.impute import KNNImputer
 
 #*******************************************************************************
 #                            LOAD AND FUTZ THE DATA
@@ -342,7 +343,7 @@ if page == page_options [ 2 ] : # datasets
         df_scaled = df_ds.copy()
 
     impute_options = [ 'No' , 'Drop NaNs' , 'Impute Mean' ,
-                       'Impute Median' , 'Impute Mode' ]
+                       'Impute Median' , 'Impute Mode' , 'Impute KNN' ]
     impute_string = 'The dataset might be dirty, would you like to do' \
                     ' anyhting about that?'
     impute_choice = st.radio ( impute_string , 
@@ -359,6 +360,9 @@ if page == page_options [ 2 ] : # datasets
         df_ds = df_ds.fillna ( df_ds.median(numeric_only=True) )
     elif impute_choice == impute_options [ 4 ] : # impute mode
         df_ds = df_ds.fillna ( df_ds.mode(numeric_only=True).iloc[0] )
+    elif impute_choice == impute_options [ 5 ] : # impute knn
+        imputer = KNNImputer()
+        df_ds[df_ds.select_dtypes(include=["number"]).columns] = imputer.fit_transform(df_ds.select_dtypes(include=["number"]))
 
     description_options = [ 'Data Information' , 'Summary Statisitics' , 
                            'Missingness Visualzation' ]
@@ -592,7 +596,7 @@ if page == page_options [ 3 ] : # exploring correlations
     df_ec['parity'] = np.select(parity_conditions, parity_labels,default=str)
 
     impute_options = [ 'No' , 'Drop NaNs' , 'Impute Mean' ,
-                       'Impute Median' , 'Impute Mode' ]
+                       'Impute Median' , 'Impute Mode' , 'Impute KNN' ]
     impute_string = 'The dataset might be dirty, would you like to do' \
                     ' anyhting about that?'
     impute_choice = st.radio ( impute_string , 
@@ -609,6 +613,9 @@ if page == page_options [ 3 ] : # exploring correlations
         df_ec = df_ec.fillna ( df_ec.median(numeric_only=True) )
     elif impute_choice == impute_options [ 4 ] : # impute mode
         df_ec = df_ec.fillna ( df_ec.mode(numeric_only=True).iloc[0] )
+    elif impute_choice == impute_options [ 5 ] : # impute knn
+        imputer = KNNImputer()
+        df_ec[df_ec.select_dtypes(include=["number"]).columns] = imputer.fit_transform(df_ec.select_dtypes(include=["number"]))
 
     scaling_options = [ 'None' , 'Standard' , 'Min/Max']
     scaling_string = 'Would you like to apply a Scaler to the data?'
@@ -736,7 +743,7 @@ if page == page_options [ 4 ] : # interactive plot
     df_ip = df_merge.copy()
 
     impute_options = [ 'No' , 'Drop NaNs' , 'Impute Mean' ,
-                       'Impute Median' , 'Impute Mode' ]
+                       'Impute Median' , 'Impute Mode' , 'Impute KNN' ]
     impute_string = 'The dataset might be dirty, would you like to do' \
                     ' anyhting about that?'
     impute_choice = st.radio ( impute_string , 
@@ -753,6 +760,9 @@ if page == page_options [ 4 ] : # interactive plot
         df_ip = df_ip.fillna ( df_ip.median(numeric_only=True) )
     elif impute_choice == impute_options [ 4 ] : # impute mode
         df_ip = df_ip.fillna ( df_ip.mode(numeric_only=True).iloc[0] )
+    elif impute_choice == impute_options [ 5 ] : # impute knn
+        imputer = KNNImputer()
+        df_ip[df_ip.select_dtypes(include=["number"]).columns] = imputer.fit_transform(df_ip.select_dtypes(include=["number"]))
 
     df_ip['isospin_asymmetry'] = ( df_ip['n'] - df_ip['z'] ) / ( df_ip['n'] + df_ip['z'] )
 
@@ -960,11 +970,14 @@ if page == page_options[5]:  # Machine Learning Applications
     # ----------------------------
     # Imputation
     # ----------------------------
-    impute_options = ['No', 'Drop NaNs', 'Impute Mean', 'Impute Median', 'Impute Mode']
+    impute_options = ['No', 'Drop NaNs', 'Impute Mean', 'Impute Median', 'Impute Mode', 'Impute KNN']
     impute_choice = st.radio(
         'The dataset might be dirty, would you like to do anything about that?',
         impute_options, horizontal=True
     )
+
+    if impute_choice == 'No':
+        st.write('Brave choice! Be aware that things will break! I strongly reccommend imputing missing values.')
 
     if impute_choice == 'Drop NaNs':
         df_ml = df_ml.dropna()
@@ -974,6 +987,9 @@ if page == page_options[5]:  # Machine Learning Applications
         df_ml = df_ml.fillna(df_ml.median(numeric_only=True))
     elif impute_choice == 'Impute Mode':
         df_ml = df_ml.fillna(df_ml.mode(numeric_only=True).iloc[0])
+    elif impute_choice == 'Impute KNN':
+        imputer = KNNImputer()
+        df_ml[df_ml.select_dtypes(include=["number"]).columns] = imputer.fit_transform(df_ml.select_dtypes(include=["number"]))
 
     # ----------------------------
     # Feature engineering
